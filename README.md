@@ -1,68 +1,49 @@
-# Vice City Cover Maker
+[![make.fun](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/competitions/gta6-cover-art-01) [![rank](https://make.fun/badge/gta6-cover-art-01/skipperchen0224/makefun-gta6-cover-art/rank.svg)](https://make.fun/competitions/gta6-cover-art-01) [![reward](https://make.fun/badge/gta6-cover-art-01/skipperchen0224/makefun-gta6-cover-art/reward.svg)](https://make.fun/competitions/gta6-cover-art-01)
 
-[![make.fun](https://make.fun/badge/gta6-cover-art-01.svg)](https://make.fun/c/gta6-cover-art-01)
-[![rank](https://make.fun/badge/gta6-cover-art-01/skipperchen0224/makefun-gta6-cover-art/rank.svg)](https://make.fun/c/gta6-cover-art-01)
-[![reward](https://make.fun/badge/gta6-cover-art-01/skipperchen0224/makefun-gta6-cover-art/reward.svg)](https://make.fun/c/gta6-cover-art-01)
+# Neon Coast — Vice City Cover Maker
 
-An original web app for **make.fun gta6-cover-art-01** — turn your own photo
-and a caption into multi-panel GTA-style cover art, and export it as a PNG to share.
-
-No Rockstar Games logo, artwork or font is used anywhere: the sunset skyline,
-palms and lettering are all drawn by this app's own code, and the two sample
-photos were made with an image model for make.fun and are free to use.
+Turn any photo and a caption into GTA 6-style multi-panel cover art, in the
+browser, offline. Photos stay on your machine — nothing is uploaded.
 
 ## What it does
 
-- **Multi-panel poster look** — three layouts (Hero Grid, Comic Strip, Portrait
-  Stack) with the white-gapped panel grid of GTA box art.
-- **Any photo** — load up to 3 of your own photos, or the built-in samples.
-  Each panel gets its own crop: zoom and position sliders per panel.
-- **Sunset / neon colour grades** — Sunset, Neon Nights, Vice Pink and Noir,
-  plus halftone dots and a vignette for the printed-poster feel.
-- **Your caption** — a bold title and subtitle, edited live, with outlined
-  poster lettering.
-- **Fast export** — one click exports a PNG in the common post sizes:
-  1080 x 1080, 1080 x 1350 or 1920 x 1080.
-- **Offline** — the app is static files under `app/`; photos never leave
-  your machine and nothing loads over the network.
+- **Multi-panel covers**: four layouts (Hero, Stack, Trio, Quad) that fill
+  3–4 panels with one photo or several.
+- **Any photo**: load your own photo per panel, or use the two bundled
+  samples. Zoom and pan each panel to crop it just right.
+- **Caption lettering**: a bold condensed title plus a neon subtitle, with a
+  star badge and a "Vice City · Leonida" tag line. All lettering is original
+  system-font type — no Rockstar logos, artwork or fonts.
+- **Colour grades**: Sunset, Neon, Palm and Noir washes, plus film grain and
+  a vignette.
+- **One-step export**: PNG in the common post sizes — 1080 × 1080,
+  1080 × 1350 and 1920 × 1080.
 
-## Play
+## Try it
 
 ```sh
 node serve.ts
 # open http://localhost:8080
 ```
 
-1. Pick a layout and a post size.
-2. Load a photo (or tap **Use sample photos**).
-3. Drag the zoom / position sliders to frame each panel.
-4. Type your caption, pick a colour grade.
-5. **Export PNG** — done.
+Pick a layout and a grade, type a title, load photos, and hit **Export PNG**.
 
-## Screenshots
+## How it is built
 
-The app stages its own screenshots deterministically (`app/src/shots.js`):
-`?shot=cover` shows an exported cover full-screen, `?shot=editor` shows the
-editor with a sample photo loaded. See `shots.json` for the exact scenes.
+- `app/index.html` + `app/style.css` — the editor shell and studio UI.
+- `app/src/render.js` — the cover engine: panel layouts, photo cover-fit,
+  grade washes, title block, grain and vignette on a 2D canvas.
+- `app/src/editor.js` — controls, photo loading, live preview, PNG export.
+- `app/src/capture.js` — `?shot=cover` / `?shot=editor` screenshot mode.
+- `main.ts` — the entrypoint: copies `app/` and `screenshots/` to the
+  output directory and writes `dossier.json` with the kit's `buildDossier`.
 
-## Files
+## Verify
 
-- `main.ts` — the entrypoint: stages `app/` and `screenshots/` into `/output`
-  and writes `dossier.json` (Node 22, standard library only). The dossier caps
-  live in one `DOSSIER_LIMITS` table at the top of the file.
-- `app/index.html`, `app/style.css` — the editor page; the stylesheet keeps its
-  palette in `:root` custom properties.
-- `app/src/main.js` — wires the controls, photo loading and PNG export. State
-  comes from one `createCoverState()` factory; button groups, photo slots and
-  framing sliders each go through a small binding helper.
-- `app/src/cover.js` — draws the cover: panel layouts, photo/scene panels,
-  grades and caption lettering. Shared steps (panel clipping, pan clamping,
-  fit-to-width lettering, one-panel painting) are helpers, not inline code.
-- `app/src/scene.js` — draws the original Vice City sunset scene (sky,
-  sun, skyline, palms, water) used to fill panels without a photo. Gradient
-  fills, antennas and lit windows are helpers over one seeded random source.
-- `app/src/shots.js` — fixed scenes for screenshots: settings and photo
-  loading are split into `applyShotSettings` and `loadShotPhotos`.
-- `serve.ts` — the local dev server: path resolution and MIME lookup are
-  helpers (`resolveStaticPath`, `mimeFor`).
-- `vendor/makefun-app.ts` — the kit's vendored library, unchanged.
+```sh
+mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+```
+
+## License
+
+MIT — see `LICENSE`.
