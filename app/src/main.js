@@ -5,36 +5,41 @@ import { drawCover } from './cover.js';
 import { runShot } from './shots.js';
 
 const canvas = document.getElementById('cover');
-const caption = document.getElementById('caption');
-const subtitle = document.getElementById('subtitle');
-const status = document.getElementById('status');
-const zoom = document.getElementById('zoom');
-const panx = document.getElementById('panx');
-const pany = document.getElementById('pany');
+const captionInput = document.getElementById('caption');
+const subtitleInput = document.getElementById('subtitle');
+const statusLine = document.getElementById('status');
+const zoomSlider = document.getElementById('zoom');
+const panXSlider = document.getElementById('panx');
+const panYSlider = document.getElementById('pany');
 const panelName = document.getElementById('panelName');
-const halftone = document.getElementById('halftone');
-const vignette = document.getElementById('vignette');
+const halftoneToggle = document.getElementById('halftone');
+const vignetteToggle = document.getElementById('vignette');
+
+/** Builds the cover state: everything drawCover needs, kept in one place. */
+export function createCoverState() {
+  return {
+    photos: [null, null, null],
+    layout: 'hero',
+    grade: 'sunset',
+    caption: 'VICE CITY',
+    subtitle: 'LEONIDA · SUNSET HEIST',
+    zooms: [1, 1, 1],
+    pans: [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }],
+    halftone: true,
+    vignette: true,
+    size: '1080x1080',
+  };
+}
 
 /** The cover state: everything drawCover needs, kept in one place. */
-export const state = {
-  photos: [null, null, null],
-  layout: 'hero',
-  grade: 'sunset',
-  caption: 'VICE CITY',
-  subtitle: 'LEONIDA · SUNSET HEIST',
-  zooms: [1, 1, 1],
-  pans: [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }],
-  halftone: true,
-  vignette: true,
-  size: '1080x1080',
-};
-let activePanel = 0;
+export const state = createCoverState();
+let selectedPanel = 0;
 
 function redraw() {
-  state.caption = caption.value;
-  state.subtitle = subtitle.value;
-  state.halftone = halftone.checked;
-  state.vignette = vignette.checked;
+  state.caption = captionInput.value;
+  state.subtitle = subtitleInput.value;
+  state.halftone = halftoneToggle.checked;
+  state.vignette = vignetteToggle.checked;
   drawCover(canvas, state);
 }
 
@@ -55,74 +60,89 @@ export function loadImage(url) {
   });
 }
 
-function syncPanelControls() {
-  panelName.textContent = String(activePanel + 1);
-  zoom.value = String(state.zooms[activePanel]);
-  panx.value = String(state.pans[activePanel].x);
-  pany.value = String(state.pans[activePanel].y);
+function syncFrameControls() {
+  panelName.textContent = String(selectedPanel + 1);
+  zoomSlider.value = String(state.zooms[selectedPanel]);
+  panXSlider.value = String(state.pans[selectedPanel].x);
+  panYSlider.value = String(state.pans[selectedPanel].y);
   document.querySelectorAll('#panels button').forEach((b) => {
-    b.classList.toggle('on', Number(b.dataset.panel) === activePanel);
+    b.classList.toggle('on', Number(b.dataset.panel) === selectedPanel);
   });
 }
 
-function wireChoice(id, attr, fn) {
-  document.getElementById(id).addEventListener('click', (e) => {
+/**
+ * Binds a button group (layouts, grades, sizes): one button stays highlighted,
+ * and picking it calls `onPick` with the button's data value.
+ */
+function bindChoiceGroup(groupId, dataAttr, onPick) {
+  document.getElementById(groupId).addEventListener('click', (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    document.querySelectorAll(`#${id} button`).forEach((b) => b.classList.remove('on'));
+    document.querySelectorAll(`#${groupId} button`).forEach((b) => b.classList.remove('on'));
     btn.classList.add('on');
-    fn(btn.dataset[attr]);
+    onPick(btn.dataset[dataAttr]);
   });
 }
 
-wireChoice('layouts', 'layout', (v) => { state.layout = v; redraw(); });
-wireChoice('grades', 'grade', (v) => { state.grade = v; redraw(); });
-wireChoice('sizes', 'size', (v) => { state.size = v; applySize(); });
-document.getElementById('panels').addEventListener('click', (e) => {
-  const btn = e.target.closest('button');
-  if (!btn) return;
-  activePanel = Number(btn.dataset.panel);
-  syncPanelControls();
-});
-
-[0, 1, 2].forEach((i) => {
-  document.getElementById(`photo${i}`).addEventListener('change', async (e) => {
+/** Binds one photo file input: loading the file fills its panel. */
+function bindPhotoSlot(index) {
+  document.getElementById(`photo${index}`).addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    state.photos[i] = await loadImage(URL.createObjectURL(file));
-    status.textContent = `Photo ${i + 1} loaded.`;
+    state.photos[index] = await loadImage(URL.createObjectURL(file));
+    statusLine.textContent = `Photo ${index + 1} loaded.`;
     redraw();
   });
-});
+}
 
-document.getElementById('samples').addEventListener('click', async () => {
-  state.photos[0] = await loadImage('samples/pier.jpg');
-  state.photos[1] = await loadImage('samples/boulevard.jpg');
-  status.textContent = 'Sample photos loaded.';
-  redraw();
-});
+/** Binds one framing slider (zoom / pan) to the selected panel's value. */
+function bindFrameSlider(slider, apply) {
+  slider.addEventListener('input', () => { apply(Number(slider.value)); redraw(); });
+}
 
-zoom.addEventListener('input', () => { state.zooms[activePanel] = Number(zoom.value); redraw(); });
-panx.addEventListener('input', () => { state.pans[activePanel].x = Number(panx.value); redraw(); });
-pany.addEventListener('input', () => { state.pans[activePanel].y = Number(pany.value); redraw(); });
-caption.addEventListener('input', redraw);
-subtitle.addEventListener('input', redraw);
-halftone.addEventListener('change', redraw);
-vignette.addEventListener('change', redraw);
-
-document.getElementById('export').addEventListener('click', () => {
+/** Exports the preview canvas as a PNG download, reporting the result. */
+function exportPng() {
   canvas.toBlob((blob) => {
     if (!blob) {
-      status.textContent = 'Export failed in this browser — try a smaller size.';
+      statusLine.textContent = 'Export failed in this browser — try a smaller size.';
       return;
     }
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `vice-city-cover-${canvas.width}x${canvas.height}.png`;
     a.click();
-    status.textContent = `Saved vice-city-cover-${canvas.width}x${canvas.height}.png`;
+    statusLine.textContent = `Saved vice-city-cover-${canvas.width}x${canvas.height}.png`;
   }, 'image/png');
+}
+
+bindChoiceGroup('layouts', 'layout', (v) => { state.layout = v; redraw(); });
+bindChoiceGroup('grades', 'grade', (v) => { state.grade = v; redraw(); });
+bindChoiceGroup('sizes', 'size', (v) => { state.size = v; applySize(); });
+document.getElementById('panels').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  selectedPanel = Number(btn.dataset.panel);
+  syncFrameControls();
 });
+
+[0, 1, 2].forEach(bindPhotoSlot);
+
+document.getElementById('samples').addEventListener('click', async () => {
+  state.photos[0] = await loadImage('samples/pier.jpg');
+  state.photos[1] = await loadImage('samples/boulevard.jpg');
+  statusLine.textContent = 'Sample photos loaded.';
+  redraw();
+});
+
+bindFrameSlider(zoomSlider, (v) => { state.zooms[selectedPanel] = v; });
+bindFrameSlider(panXSlider, (v) => { state.pans[selectedPanel].x = v; });
+bindFrameSlider(panYSlider, (v) => { state.pans[selectedPanel].y = v; });
+captionInput.addEventListener('input', redraw);
+subtitleInput.addEventListener('input', redraw);
+halftoneToggle.addEventListener('change', redraw);
+vignetteToggle.addEventListener('change', redraw);
+
+document.getElementById('export').addEventListener('click', exportPng);
 
 const shot = new URLSearchParams(location.search).get('shot');
 if (shot) {
@@ -132,11 +152,11 @@ if (shot) {
     applySize,
     redraw,
     setCaption(text, sub) {
-      caption.value = text;
-      if (sub !== undefined) subtitle.value = sub;
+      captionInput.value = text;
+      if (sub !== undefined) subtitleInput.value = sub;
     },
   });
 } else {
-  syncPanelControls();
+  syncFrameControls();
   applySize();
 }

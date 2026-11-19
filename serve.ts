@@ -10,8 +10,8 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(fileURLToPath(new URL('./app', import.meta.url)));
 const args = process.argv.slice(2);
 const portIndex = args.indexOf('--port');
-const requested = portIndex === -1 ? 8080 : Number(args[portIndex + 1]);
-const port = Number.isInteger(requested) && requested > 0 && requested < 65536 ? requested : 8080;
+const requestedPort = portIndex === -1 ? 8080 : Number(args[portIndex + 1]);
+const port = Number.isInteger(requestedPort) && requestedPort > 0 && requestedPort < 65536 ? requestedPort : 8080;
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -38,6 +38,26 @@ const MIME: Record<string, string> = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
+/** The MIME type for a file, defaulting to a generic download. */
+function mimeFor(file: string): string {
+  return MIME[extname(file).toLowerCase()] ?? 'application/octet-stream';
+}
+
+/**
+ * Resolves a request path inside app/: 'ok' with the file, 'forbidden' when the
+ * path escapes the root, 'not-found' when it is missing or not a file.
+ */
+function resolveStaticPath(pathname: string): { status: 'ok'; file: string } | { status: 'forbidden' | 'not-found' } {
+  const file = resolve(join(root, normalize(pathname)));
+  if (file !== root && !file.startsWith(root + sep)) return { status: 'forbidden' };
+  try {
+    if (!statSync(file).isFile()) return { status: 'not-found' };
+    return { status: 'ok', file };
+  } catch {
+    return { status: 'not-found' };
+  }
+}
+
 createServer((request, response) => {
   const url = new URL(request.url ?? '/', 'http://localhost');
   let pathname: string;
@@ -48,23 +68,19 @@ createServer((request, response) => {
     return;
   }
   if (pathname.endsWith('/')) pathname += 'index.html';
-  const file = resolve(join(root, normalize(pathname)));
-  if (file !== root && !file.startsWith(root + sep)) {
+  const resolved = resolveStaticPath(pathname);
+  if (resolved.status === 'forbidden') {
     response.writeHead(403).end('forbidden');
     return;
   }
-  let size: number;
-  try {
-    const stats = statSync(file);
-    if (!stats.isFile()) throw new Error('not a file');
-    size = stats.size;
-  } catch {
+  if (resolved.status === 'not-found') {
     response.writeHead(404).end('not found');
     return;
   }
+  const file = resolved.file;
   response.writeHead(200, {
-    'content-type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream',
-    'content-length': size,
+    'content-type': mimeFor(file),
+    'content-length': statSync(file).size,
     'cache-control': 'no-store',
   });
   createReadStream(file).pipe(response);

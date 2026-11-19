@@ -1,35 +1,64 @@
 /* Vice City Cover Maker — dark editor, sunset accents, poster-first preview. */
-html, body { margin: 0; min-height: 100%; background: #14101f; color: #f4eefc; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+:root {
+  --bg: #14101f;
+  --ink: #f4eefc;
+  --ink-dim: #b9aec9;
+  --ink-faint: #8d83a5;
+  --panel: #1e1830;
+  --panel-line: #332a4d;
+  --control: #2a2142;
+  --control-line: #4a3f6b;
+  --accent: #ff2e88;
+  --accent-soft: #ff8ac2;
+  --accent-warm: #ff7a3d;
+  --accent-gold: #ffc93c;
+  --ok: #7df0d4;
+}
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+
+/* Page layout: editor column beside a sticky preview. */
 .app { display: flex; gap: 28px; align-items: flex-start; justify-content: center; padding: 24px; box-sizing: border-box; }
 .controls { display: flex; flex-direction: column; gap: 18px; width: 320px; flex: none; }
 .controls h1 { margin: 0; font-size: 34px; line-height: 1.05; letter-spacing: -0.5px; color: #fff; text-transform: uppercase; }
-.controls h1::after { content: ""; display: block; width: 64px; height: 5px; margin-top: 10px; background: linear-gradient(90deg, #ff2e88, #ff7a3d, #ffc93c); border-radius: 3px; }
-.tagline { margin: 0; color: #b9aec9; }
-.group { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: #1e1830; border: 1px solid #332a4d; border-radius: 12px; }
-.group h2 { margin: 0; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: #ff8ac2; }
+.controls h1::after { content: ""; display: block; width: 64px; height: 5px; margin-top: 10px; background: linear-gradient(90deg, var(--accent), var(--accent-warm), var(--accent-gold)); border-radius: 3px; }
+.tagline { margin: 0; color: var(--ink-dim); }
+
+/* Control groups and their rows. */
+.group { display: flex; flex-direction: column; gap: 10px; padding: 14px; background: var(--panel); border: 1px solid var(--panel-line); border-radius: 12px; }
+.group h2 { margin: 0; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent-soft); }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
-button { font: inherit; font-weight: 700; padding: 9px 12px; border: 1px solid #4a3f6b; border-radius: 8px; background: #2a2142; color: #f4eefc; cursor: pointer; }
-button:hover { border-color: #ff2e88; }
-button.on { background: #ff2e88; border-color: #ff2e88; color: #fff; }
+
+/* Buttons. */
+button { font: inherit; font-weight: 700; padding: 9px 12px; border: 1px solid var(--control-line); border-radius: 8px; background: var(--control); color: var(--ink); cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.ghost { background: transparent; }
-button.big { background: linear-gradient(90deg, #ff2e88, #ff7a3d); border: 0; color: #fff; font-size: 17px; padding: 13px; }
+button.big { background: linear-gradient(90deg, var(--accent), var(--accent-warm)); border: 0; color: #fff; font-size: 17px; padding: 13px; }
+
+/* Form controls. */
 label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 13px; }
 label.slider, label.check { flex-direction: row; align-items: center; justify-content: space-between; }
 label.check { font-weight: 400; }
-input[type=text] { font: inherit; padding: 9px 10px; border: 1px solid #4a3f6b; border-radius: 8px; background: #14101f; color: #fff; }
-input[type=file] { font: inherit; font-weight: 400; color: #b9aec9; }
-input[type=range] { accent-color: #ff2e88; width: 170px; }
-input[type=checkbox] { accent-color: #ff2e88; width: 18px; height: 18px; }
+input[type=text] { font: inherit; padding: 9px 10px; border: 1px solid var(--control-line); border-radius: 8px; background: var(--bg); color: #fff; }
+input[type=file] { font: inherit; font-weight: 400; color: var(--ink-dim); }
+input[type=range] { accent-color: var(--accent); width: 170px; }
+input[type=checkbox] { accent-color: var(--accent); width: 18px; height: 18px; }
 .photo-slots { display: flex; flex-direction: column; gap: 10px; }
-.hint { margin: 0; font-size: 12px; color: #8d83a5; }
-#status { margin: 0; min-height: 1.4em; color: #7df0d4; font-size: 13px; }
+.hint { margin: 0; font-size: 12px; color: var(--ink-faint); }
+#status { margin: 0; min-height: 1.4em; color: var(--ok); font-size: 13px; }
+
+/* Preview column. */
 .preview { display: flex; flex-direction: column; gap: 10px; align-items: center; position: sticky; top: 24px; }
 .preview canvas { width: min(72vh, 62vw); height: auto; max-height: 86vh; object-fit: contain; background: #000; box-shadow: 0 12px 44px rgba(0, 0, 0, 0.55); border-radius: 4px; }
-.preview-note { margin: 0; color: #8d83a5; font-size: 13px; }
+.preview-note { margin: 0; color: var(--ink-faint); font-size: 13px; }
+
+/* Screenshot mode: cover alone, full-screen, no editor chrome. */
 body.shot-cover .controls, body.shot-cover .preview-note { display: none; }
 body.shot-cover .app { padding: 0; }
 body.shot-cover .preview { position: static; }
 body.shot-cover canvas { width: 100vw; height: 100vh; max-height: none; box-shadow: none; border-radius: 0; object-fit: fill; }
+
+/* Narrow screens: stack the editor above the preview. */
 @media (max-width: 900px) {
   .app { flex-direction: column; align-items: center; }
   .controls { width: min(100%, 560px); }

@@ -39,20 +39,36 @@ export function layoutPanels(layout, W, H) {
   return hero;
 }
 
+/** Looks a grade up, falling back to sunset for an unknown name. */
+function gradeSpec(grade) {
+  return GRADES[grade] ?? GRADES.sunset;
+}
+
+/** Saves the context and clips all later drawing to one panel rect. */
+function clipPanel(ctx, rect) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(rect.x, rect.y, rect.w, rect.h);
+  ctx.clip();
+}
+
+/**
+ * Clamps a pan offset so the photo can never slide out of its panel and expose a
+ * blank strip: the most it may move is half its own overhang on each axis.
+ */
+function clampPanOffset(overhang, requested) {
+  return Math.max(-overhang / 2, Math.min(overhang / 2, requested));
+}
+
 /** Draws one photo cover-fit into a panel rect, with the panel's zoom and pan. */
 export function drawPhotoPanel(ctx, photo, rect, zoom, panX, panY) {
   const { x, y, w, h } = rect;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
-  ctx.clip();
+  clipPanel(ctx, rect);
   const scale = Math.max(w / photo.naturalWidth, h / photo.naturalHeight) * zoom;
   const pw = photo.naturalWidth * scale;
   const ph = photo.naturalHeight * scale;
-  // Clamp the pan so the photo can never slide out of its panel and expose a
-  // blank strip: the most it may move is half its own overhang on each axis.
-  const dx = Math.max(-(pw - w) / 2, Math.min((pw - w) / 2, panX * w));
-  const dy = Math.max(-(ph - h) / 2, Math.min((ph - h) / 2, panY * h));
+  const dx = clampPanOffset(pw - w, panX * w);
+  const dy = clampPanOffset(ph - h, panY * h);
   ctx.drawImage(photo, x + (w - pw) / 2 + dx, y + (h - ph) / 2 + dy, pw, ph);
   ctx.restore();
 }
@@ -60,10 +76,7 @@ export function drawPhotoPanel(ctx, photo, rect, zoom, panX, panY) {
 /** Fills a panel with the app's own scene when it holds no photo. */
 export function drawScenePanel(ctx, rect, grade, seed) {
   const { x, y, w, h } = rect;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
-  ctx.clip();
+  clipPanel(ctx, rect);
   ctx.translate(x, y);
   if (grade === 'neon' || grade === 'noir') drawNeonScene(ctx, w, h, seed);
   else drawViceCityScene(ctx, w, h, seed);
@@ -72,20 +85,39 @@ export function drawScenePanel(ctx, rect, grade, seed) {
 
 /** Washes a panel with the grade's tint, darkening its foot for the caption. */
 export function gradePanel(ctx, rect, grade, captionBand) {
-  const g = GRADES[grade] ?? GRADES.sunset;
+  const spec = gradeSpec(grade);
   const { x, y, w, h } = rect;
-  ctx.fillStyle = g.wash;
+  ctx.fillStyle = spec.wash;
   ctx.fillRect(x, y, w, h);
   const shade = ctx.createLinearGradient(0, y + h * 0.4, 0, y + h);
   shade.addColorStop(0, 'rgba(20, 8, 32, 0)');
-  shade.addColorStop(1, captionBand ? 'rgba(20, 8, 32, 0.72)' : g.deep);
+  shade.addColorStop(1, captionBand ? 'rgba(20, 8, 32, 0.72)' : spec.deep);
   ctx.fillStyle = shade;
   ctx.fillRect(x, y, w, h);
 }
 
+/**
+ * Shrinks a font until `text` fits `maxWidth`, then leaves it set on the
+ * context. Returns the size that fit.
+ */
+function fitTextToWidth(ctx, text, startSize, maxWidth, minSize, step, fontFor) {
+  let size = startSize;
+  ctx.font = fontFor(size);
+  while (ctx.measureText(text).width > maxWidth && size > minSize) {
+    size -= step;
+    ctx.font = fontFor(size);
+  }
+  return size;
+}
+
+/** Applies letter-spacing where the canvas supports it; older canvases skip it. */
+function setLetterSpacing(ctx, px) {
+  try { ctx.letterSpacing = `${px}px`; } catch { /* older canvas: no letter-spacing */ }
+}
+
 /** Bold poster lettering: white capitals, dark outline, accent underline. */
 export function drawCaption(ctx, rect, title, subtitle, grade) {
-  const g = GRADES[grade] ?? GRADES.sunset;
+  const spec = gradeSpec(grade);
   const { x, y, w, h } = rect;
   const text = title.trim().toUpperCase();
   const sub = subtitle.trim().toUpperCase();
@@ -93,34 +125,30 @@ export function drawCaption(ctx, rect, title, subtitle, grade) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   if (text) {
-    let size = h * 0.44;
-    ctx.font = `900 ${size}px "Arial Black", Impact, Arial, sans-serif`;
-    try { ctx.letterSpacing = `${size * 0.02}px`; } catch { /* older canvas: no letter-spacing */ }
-    while (ctx.measureText(text).width > w * 0.92 && size > 10) {
-      size -= 2;
-      ctx.font = `900 ${size}px "Arial Black", Impact, Arial, sans-serif`;
-    }
+    const startSize = h * 0.44;
+    ctx.font = `900 ${startSize}px "Arial Black", Impact, Arial, sans-serif`;
+    setLetterSpacing(ctx, startSize * 0.02);
+    const size = fitTextToWidth(ctx, text, startSize, w * 0.92, 10, 2,
+      (s) => `900 ${s}px "Arial Black", Impact, Arial, sans-serif`);
     const cy = y + h * 0.42;
     ctx.lineJoin = 'round';
     ctx.lineWidth = size * 0.16;
     ctx.strokeStyle = '#160a24';
     ctx.strokeText(text, x + w / 2, cy);
-    ctx.fillStyle = g.caption;
+    ctx.fillStyle = spec.caption;
     ctx.fillText(text, x + w / 2, cy);
     // Accent rule under the title.
     const tw = ctx.measureText(text).width;
-    ctx.fillStyle = g.accent;
+    ctx.fillStyle = spec.accent;
     ctx.fillRect(x + (w - tw) / 2, cy + size * 0.62, tw, Math.max(4, h * 0.035));
   }
   if (sub) {
-    let size = h * 0.13;
-    ctx.font = `700 ${size}px Arial, sans-serif`;
-    try { ctx.letterSpacing = `${size * 0.28}px`; } catch { /* older canvas */ }
-    while (ctx.measureText(sub).width > w * 0.9 && size > 8) {
-      size -= 1;
-      ctx.font = `700 ${size}px Arial, sans-serif`;
-    }
-    ctx.fillStyle = g.accent;
+    const startSize = h * 0.13;
+    ctx.font = `700 ${startSize}px Arial, sans-serif`;
+    setLetterSpacing(ctx, startSize * 0.28);
+    const size = fitTextToWidth(ctx, sub, startSize, w * 0.9, 8, 1,
+      (s) => `700 ${s}px Arial, sans-serif`);
+    ctx.fillStyle = spec.accent;
     ctx.fillText(sub, x + w / 2, y + h * 0.82);
   }
   ctx.restore();
@@ -149,6 +177,28 @@ function drawVignette(ctx, W, H) {
   ctx.fillRect(0, 0, W, H);
 }
 
+/** Thin dark frame around one panel. */
+function framePanel(ctx, rect, W, H) {
+  ctx.strokeStyle = 'rgba(20, 8, 32, 0.55)';
+  ctx.lineWidth = Math.max(2, Math.min(W, H) * 0.004);
+  ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+}
+
+/** Paints one panel: photo or scene, its grade wash, and — for the caption band — the lettering. */
+function paintPanel(ctx, rect, index, state, grade) {
+  if (rect.captionBand) {
+    // Caption band: the sunset scene behind the lettering.
+    drawScenePanel(ctx, rect, grade, rect.seed);
+    gradePanel(ctx, rect, grade, true);
+    drawCaption(ctx, rect, state.caption ?? '', state.subtitle ?? '', grade);
+  } else {
+    const photo = state.photos?.[index] ?? null;
+    if (photo) drawPhotoPanel(ctx, photo, rect, state.zooms?.[index] ?? 1, state.pans?.[index]?.x ?? 0, state.pans?.[index]?.y ?? 0);
+    else drawScenePanel(ctx, rect, grade, rect.seed);
+    gradePanel(ctx, rect, grade, false);
+  }
+}
+
 /**
  * Draws the whole cover onto `canvas` at its own size.
  * state: { photos[3] (Image|null), layout, grade, caption, subtitle,
@@ -163,21 +213,8 @@ export function drawCover(canvas, state) {
   ctx.fillRect(0, 0, W, H);
   const panels = layoutPanels(state.layout ?? 'hero', W, H);
   panels.forEach((rect, i) => {
-    if (rect.captionBand) {
-      // Caption band: the sunset scene behind the lettering.
-      drawScenePanel(ctx, rect, grade, rect.seed);
-      gradePanel(ctx, rect, grade, true);
-      drawCaption(ctx, rect, state.caption ?? '', state.subtitle ?? '', grade);
-    } else {
-      const photo = state.photos?.[i] ?? null;
-      if (photo) drawPhotoPanel(ctx, photo, rect, state.zooms?.[i] ?? 1, state.pans?.[i]?.x ?? 0, state.pans?.[i]?.y ?? 0);
-      else drawScenePanel(ctx, rect, grade, rect.seed);
-      gradePanel(ctx, rect, grade, false);
-    }
-    // Thin dark frame around each panel.
-    ctx.strokeStyle = 'rgba(20, 8, 32, 0.55)';
-    ctx.lineWidth = Math.max(2, Math.min(W, H) * 0.004);
-    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    paintPanel(ctx, rect, i, state, grade);
+    framePanel(ctx, rect, W, H);
   });
   if (state.halftone) drawHalftone(ctx, W, H);
   if (state.vignette) drawVignette(ctx, W, H);
