@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vice City Cover Maker</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<main class="app">
+  <section class="controls" aria-label="Cover editor">
+    <h1>Vice City<br>Cover Maker</h1>
+    <p class="tagline">Your photo, a caption, and a Vice City sunset — made into poster cover art.</p>
+
+    <div class="group">
+      <h2>1 · Layout</h2>
+      <div class="row" id="layouts">
+        <button type="button" data-layout="hero" class="on">Hero Grid</button>
+        <button type="button" data-layout="comic">Comic Strip</button>
+        <button type="button" data-layout="stack">Portrait Stack</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>2 · Photos</h2>
+      <div class="photo-slots">
+        <label>Photo 1 <input id="photo0" type="file" accept="image/*"></label>
+        <label>Photo 2 <input id="photo1" type="file" accept="image/*"></label>
+        <label>Photo 3 <input id="photo2" type="file" accept="image/*"></label>
+      </div>
+      <button id="samples" type="button" class="ghost">Use sample photos</button>
+      <p class="hint">Empty panels are filled with the app's own sunset skyline scene.</p>
+    </div>
+
+    <div class="group">
+      <h2>3 · Frame panel <span id="panelName">1</span></h2>
+      <div class="row" id="panels">
+        <button type="button" data-panel="0" class="on">Panel 1</button>
+        <button type="button" data-panel="1">Panel 2</button>
+        <button type="button" data-panel="2">Panel 3</button>
+      </div>
+      <label class="slider">Zoom <input id="zoom" type="range" min="0.6" max="2.5" step="0.05" value="1"></label>
+      <label class="slider">Left–right <input id="panx" type="range" min="-0.5" max="0.5" step="0.02" value="0"></label>
+      <label class="slider">Up–down <input id="pany" type="range" min="-0.5" max="0.5" step="0.02" value="0"></label>
+    </div>
+
+    <div class="group">
+      <h2>4 · Caption</h2>
+      <label>Title <input id="caption" type="text" maxlength="24" value="VICE CITY"></label>
+      <label>Subtitle <input id="subtitle" type="text" maxlength="40" value="LEONIDA · SUNSET HEIST"></label>
+    </div>
+
+    <div class="group">
+      <h2>5 · Colour grade</h2>
+      <div class="row" id="grades">
+        <button type="button" data-grade="sunset" class="on">Sunset</button>
+        <button type="button" data-grade="neon">Neon Nights</button>
+        <button type="button" data-grade="vice">Vice Pink</button>
+        <button type="button" data-grade="noir">Noir</button>
+      </div>
+      <label class="check"><input id="halftone" type="checkbox" checked> Halftone print dots</label>
+      <label class="check"><input id="vignette" type="checkbox" checked> Vignette</label>
+    </div>
+
+    <div class="group">
+      <h2>6 · Post size</h2>
+      <div class="row" id="sizes">
+        <button type="button" data-size="1080x1080" class="on">1080 × 1080</button>
+        <button type="button" data-size="1080x1350">1080 × 1350</button>
+        <button type="button" data-size="1920x1080">1920 × 1080</button>
+      </div>
+      <button id="export" type="button" class="big">Export PNG</button>
+      <p id="status" role="status"></p>
+    </div>
+  </section>
+  <section class="preview">
+    <canvas id="cover" width="1080" height="1080" aria-label="The cover preview"></canvas>
+    <p class="preview-note">Live preview — what you see is what the PNG holds.</p>
+  </section>
+</main>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
