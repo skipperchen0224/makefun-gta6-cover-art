@@ -1,7 +1,10 @@
 // Neon Coast screenshot mode — ?shot=cover draws one exported cover full
 // frame; ?shot=editor shows the editor with the sample photos loaded.
-// Query keys are this app's own: p0/p1/p2 photo, t title, s subtitle,
-// l layout, g grade, sz size, z zoom, oy vertical pan.
+// Query keys are this app's own: p0/p1/p2 photo (or "none" for a synthwave
+// scene panel), t title, s subtitle, l layout, g grade, sz size, z zoom,
+// oy vertical pan, sw synthwave backdrop (0/1), sy sun Y, gd grid density,
+// dp depth, hue hue shift, car/palm/heli/yacht foreground toggles (0/1),
+// sc scanlines (0/1), ch chroma (0/1).
 (function () {
   "use strict";
 
@@ -15,6 +18,42 @@
       img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
       img.src = src;
+    });
+  }
+
+  function applySceneParams(q, state) {
+    const sc = state.scene;
+    const num = (key, fallback) => {
+      const v = Number(q.get(key));
+      return Number.isFinite(v) ? v : fallback;
+    };
+    const flag = (key, fallback) => {
+      const v = q.get(key);
+      return v == null ? fallback : v !== "0";
+    };
+    sc.synthwave = flag("sw", sc.synthwave);
+    sc.sunY = num("sy", sc.sunY);
+    sc.gridDensity = num("gd", sc.gridDensity);
+    sc.depth = num("dp", sc.depth);
+    sc.hue = num("hue", sc.hue);
+    sc.showCar = flag("car", sc.showCar);
+    sc.showPalm = flag("palm", sc.showPalm);
+    sc.showHeli = flag("heli", sc.showHeli);
+    sc.showYacht = flag("yacht", sc.showYacht);
+    state.scanlines = flag("sc", state.scanlines);
+    state.chroma = flag("ch", state.chroma);
+  }
+
+  function applyPanelPhotos(q, state) {
+    state.panels.forEach((p, i) => {
+      const pick = q.get("p" + i);
+      if (pick === "boulevard" || pick === "pier") {
+        p.photo = pick;
+        delete p.dataUrl;
+      } else if (pick === "none") {
+        p.photo = null;
+        delete p.dataUrl;
+      }
     });
   }
 
@@ -42,16 +81,16 @@
     state.grade = q.get("g") || "sunset";
     const zoom = Number(q.get("z") || "1");
     const oy = Number(q.get("oy") || "0");
-    state.panels.forEach((p, i) => {
-      const pick = q.get("p" + i);
-      if (pick === "boulevard" || pick === "pier") p.photo = pick;
+    state.panels.forEach((p) => {
       p.zoom = zoom;
       p.oy = oy;
     });
+    applySceneParams(q, state);
+    applyPanelPhotos(q, state);
     const images = [];
     for (let i = 0; i < state.panels.length; i++) {
       const name = state.panels[i].photo;
-      images.push(await loadImage(`samples/${name}.jpg`));
+      images.push(name ? await loadImage(`samples/${name}.jpg`) : null);
     }
     window.NeonCoast.drawCover(canvas, state, images);
     window.__shotReady = true;
@@ -67,14 +106,13 @@
     if (q.get("l")) state.layout = q.get("l");
     if (q.get("g")) state.grade = q.get("g");
     if (q.get("sz")) state.size = q.get("sz");
-    state.panels.forEach((p, i) => {
-      const pick = q.get("p" + i);
-      if (pick === "boulevard" || pick === "pier") p.photo = pick;
-    });
+    applySceneParams(q, state);
+    applyPanelPhotos(q, state);
     const title = document.getElementById("titleInput");
     if (title) title.value = state.title;
     const sub = document.getElementById("subtitleInput");
     if (sub) sub.value = state.subtitle;
+    ed.syncSceneUI();
     await ed.refresh();
     window.__shotReady = true;
     document.title = "Neon Coast — editor";

@@ -2,6 +2,9 @@
 // Entrypoint: copies app/ and screenshots/ into the output directory and
 // writes /output/dossier.json with the kit's buildDossier library.
 // Node 22, standard library only. Deterministic: no timestamps, no network.
+// Round 3: synthwave scene engine (neon sky, scanline-cut sun, perspective
+// grid, silhouettes), CRT + chromatic-aberration post, layered-glow title,
+// ESRB + barcode packaging, Randomize / Export 4K, 8 screenshots.
 import { cp, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +29,7 @@ async function main() {
   const check = JSON.parse(Buffer.from(dossier).toString("utf8"));
   console.log(`dossier written: ${Object.keys(check).length} top-level keys`);
   console.log(`output: ${outputDir}`);
+  console.log(`screenshots: ${shotsDir} -> ${join(outputDir, "screenshots")}`);
 }
 
 main().catch((err) => {

@@ -14,8 +14,9 @@
       <p class="tagline">Vice City cover maker — your photo, your caption, one PNG to share.</p>
     </div>
     <div class="top-actions">
-      <button id="shuffleBtn" type="button">Surprise me</button>
+      <button id="shuffleBtn" type="button">Randomize</button>
       <button id="exportBtn" type="button" class="primary">Export PNG</button>
+      <button id="export4kBtn" type="button" class="primary">Export 4K</button>
     </div>
   </header>
 
@@ -50,6 +51,7 @@
         <button type="button" data-size="square">Square</button>
         <button type="button" data-size="portrait">Portrait</button>
         <button type="button" data-size="wide" class="on">Wide</button>
+        <button type="button" data-size="4k">4K</button>
       </div>
       <p class="hint" id="sizeInfo"></p>
 
@@ -85,6 +87,36 @@
       </label>
       <label class="check"><input id="grainToggle" type="checkbox" checked> Film grain</label>
       <label class="check"><input id="vignetteToggle" type="checkbox" checked> Vignette</label>
+      <label class="check"><input id="scanlinesToggle" type="checkbox" checked> CRT scanlines</label>
+      <label class="check"><input id="chromaToggle" type="checkbox" checked> Chromatic aberration</label>
+
+      <h2>7 · Synthwave scene</h2>
+      <p class="hint">Neon sky, scanline-cut sun, perspective grid and silhouettes. The scene fills empty panels and frames the cover.</p>
+      <label class="check"><input id="synthwaveToggle" type="checkbox" checked> Synthwave backdrop</label>
+      <label>Sun height <span id="sunYVal">42%</span>
+        <input id="sunY" type="range" min="0.2" max="0.6" step="0.01" value="0.42">
+      </label>
+      <label>Grid density <span id="gridVal">12</span>
+        <input id="gridDensity" type="range" min="6" max="24" step="1" value="12">
+      </label>
+      <label>Perspective depth <span id="depthVal">1.0×</span>
+        <input id="depth" type="range" min="0.5" max="2" step="0.1" value="1">
+      </label>
+      <label>Hue shift <span id="hueVal">0°</span>
+        <input id="hue" type="range" min="-180" max="180" step="5" value="0">
+      </label>
+      <div class="row">
+        <label class="check"><input id="showCar" type="checkbox" checked> Sports car</label>
+        <label class="check"><input id="showPalm" type="checkbox" checked> Palm trees</label>
+        <label class="check"><input id="showHeli" type="checkbox"> Helicopter</label>
+        <label class="check"><input id="showYacht" type="checkbox"> Yacht</label>
+      </div>
+      <label class="file-label">Import a custom foreground PNG (silhouette, transparent background)
+        <input id="foregroundFile" type="file" accept="image/png,image/*">
+      </label>
+      <div class="row">
+        <button type="button" id="clearForeground">Remove custom foreground</button>
+      </div>
       <p class="hint" id="exportNote"></p>
     </section>
 
