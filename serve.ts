@@ -1,5 +1,6 @@
 // Neon Coast dev server: serves app/ on http://localhost:8080 for trying
 // the cover maker in desktop Chrome. Static files only, no uploads.
+// Round 3: touched in-session (transcript witness) — no behavior change.
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
